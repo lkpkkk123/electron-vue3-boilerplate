@@ -1,0 +1,15 @@
+{
+  "name": "shared-memory-addon",
+  "version": "1.0.0",
+  "description": "Shared memory native addon for Electron",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp rebuild"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.0"
+  }
+}

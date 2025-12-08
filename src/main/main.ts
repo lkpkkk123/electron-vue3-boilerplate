@@ -3,6 +3,7 @@ import log from "electron-log/main";
 import PrimaryWindow from "./windows/primary";
 import { CreateAppTray } from "./tray";
 import appState from "./app-state";
+import { registerTestImageIPC, cleanupTestImage } from "../lib/test-video/main";
 
 // 禁用沙盒
 // 在某些系统环境上，不禁用沙盒会导致界面花屏
@@ -25,6 +26,9 @@ if(!gotLock && appState.onlyAllowSingleInstance){
     }
 
     log.info("App initialize ok");
+
+    // 注册测试视频 IPC 处理器
+    registerTestImageIPC();
 
     appState.primaryWindow = new PrimaryWindow();
     appState.tray = CreateAppTray();
@@ -57,6 +61,7 @@ if(!gotLock && appState.onlyAllowSingleInstance){
   });
 
   app.on("will-quit", () => {
+    cleanupTestImage();
     appState.uninitialize();
   });
 }

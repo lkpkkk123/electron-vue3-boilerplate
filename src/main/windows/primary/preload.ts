@@ -6,6 +6,7 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("primaryWindowAPI", {
   sendMessage: (message: string) => ipcRenderer.send("message", message),
   showFramelessSampleWindow: () => ipcRenderer.send("show-frameless-sample-window"),
+  showTestVideoWindow: () => ipcRenderer.send("show-test-video-window"),
   openExternalLink: (url: string) => ipcRenderer.send("open-external-link", url),
   clearAppConfiguration: () => ipcRenderer.send("clear-app-configuration"),
   onShowExitAppMsgbox: (callback) => ipcRenderer.on("show-exit-app-msgbox", () => {

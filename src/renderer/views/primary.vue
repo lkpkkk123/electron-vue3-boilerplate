@@ -33,6 +33,9 @@
         <a-button @click="onShowFramelessWindow">
           无边框窗口
         </a-button>
+        <a-button @click="onShowTestVideoWindow" type="primary">
+          🎬 测试视频播放器 (共享内存)
+        </a-button>
         <a-button @click="onGetFileMd5">
           文件MD5
         </a-button>
@@ -184,6 +187,11 @@ function onShowOtherEnv(){
 function onShowFramelessWindow(){
   // 通知主进程显示无边框示例窗口
   getElectronApi().showFramelessSampleWindow();
+}
+
+function onShowTestVideoWindow(){
+  // 通知主进程显示测试视频窗口
+  getElectronApi().showTestVideoWindow();
 }
   
 function onOpenHomepage(){

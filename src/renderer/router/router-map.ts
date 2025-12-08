@@ -11,6 +11,11 @@ const routeMap: Array<RouteRecordRaw> = [
     path: "/frameless-sample",
     name: "frameless-sample",
     component: () => import("@views/frameless-sample.vue"),
+  },
+  {
+    path: "/test-video",
+    name: "test-video",
+    component: () => import("../../lib/test-video/renderer/test-video-player.vue"),
   }
 ];
 

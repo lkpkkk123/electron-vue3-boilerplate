@@ -3,6 +3,7 @@ import { app, dialog, ipcMain } from "electron";
 import appState from "../../app-state";
 import WindowBase from "../window-base";
 import FramelessWindow from "../frameless";
+import TestVideoWindow from "../test-video";
 import axiosInst from "../../../lib/axios-inst/main";
 
 class PrimaryWindow extends WindowBase{
@@ -62,6 +63,17 @@ class PrimaryWindow extends WindowBase{
 
           win.setPosition(x, y, false);
         }
+        win.show();
+      }
+    });
+
+    ipcMain.on("show-test-video-window", (event) => {
+      if(!appState.testVideoWindow?.valid){
+        appState.testVideoWindow = new TestVideoWindow();
+      }
+      
+      const win = appState.testVideoWindow?.browserWindow;
+      if(win){
         win.show();
       }
     });

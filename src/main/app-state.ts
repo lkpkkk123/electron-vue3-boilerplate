@@ -6,6 +6,7 @@ import path from "path";
 import { Tray, app, dialog } from "electron";
 import PrimaryWindow from "./windows/primary";
 import FramelessWindow from "./windows/frameless";
+import TestVideoWindow from "./windows/test-video";
 import log from "electron-log/main";
 import { Singleton } from "../lib/utils/shared";
 import fd from "../lib/file-download/main";
@@ -97,6 +98,9 @@ class AppState extends Singleton{
 
   // 无边框示例窗口的对象
   public framelessWindow : null | FramelessWindow = null;
+
+  // 测试视频窗口对象
+  public testVideoWindow : null | TestVideoWindow = null;
 
   // 系统托盘
   public tray: null | Tray = null;
