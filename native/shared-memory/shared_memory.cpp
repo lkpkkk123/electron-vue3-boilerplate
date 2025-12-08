@@ -130,13 +130,45 @@ public:
         }
         
         auto it = sharedMemories.find(name);
+
+        // 如果在当前进程中未找到，尝试打开已存在的共享内存
         if (it == sharedMemories.end()) {
+          // 尝试打开已存在的共享内存
+          int fd = shm_open(name.c_str(), O_RDWR, 0666);
+          if (fd == -1) {
             Napi::Error::New(env, "Shared memory not found")
                 .ThrowAsJavaScriptException();
             return env.Null();
+          }
+
+          // 获取大小
+          struct stat st;
+          if (fstat(fd, &st) == -1) {
+            close(fd);
+            Napi::Error::New(env, "Failed to get shared memory size")
+                .ThrowAsJavaScriptException();
+            return env.Null();
+          }
+          size_t size = st.st_size;
+
+          // 映射到内存
+          void *ptr =
+              mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+          if (ptr == MAP_FAILED) {
+            close(fd);
+            Napi::Error::New(env, "Failed to map shared memory")
+                .ThrowAsJavaScriptException();
+            return env.Null();
+          }
+
+          // 保存到映射表
+          SharedMemoryInfo info_struct = {ptr, size, fd};
+          sharedMemories[name] = info_struct;
+          it = sharedMemories.find(name);
         }
-        
+
         // 创建 Buffer（拷贝数据）
+        // 注意：虽然有拷贝开销，但这是跨进程传输大数据的必要成本
         Napi::Buffer<uint8_t> buffer = Napi::Buffer<uint8_t>::Copy(
             env,
             static_cast<uint8_t*>(it->second.ptr),
@@ -171,6 +203,99 @@ public:
         
         return Napi::Boolean::New(env, true);
     }
+
+    // 映射共享内存到当前进程（用于渲染进程）
+    static Napi::Value MapSharedMemory(const Napi::CallbackInfo &info) {
+      Napi::Env env = info.Env();
+
+      if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Expected (name: string)")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+
+      std::string name = info[0].As<Napi::String>().Utf8Value();
+      if (name[0] != '/') {
+        name = "/" + name;
+      }
+
+      // 如果已经映射过，直接返回成功
+      auto it = sharedMemories.find(name);
+      if (it != sharedMemories.end()) {
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("success", true);
+        result.Set("size", Napi::Number::New(env, it->second.size));
+        return result;
+      }
+
+      // 打开已存在的共享内存
+      int fd = shm_open(name.c_str(), O_RDWR, 0666);
+      if (fd == -1) {
+        Napi::Error::New(env, "Failed to open shared memory")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+
+      // 获取大小
+      struct stat st;
+      if (fstat(fd, &st) == -1) {
+        close(fd);
+        Napi::Error::New(env, "Failed to get shared memory size")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+      size_t size = st.st_size;
+
+      // 映射到内存
+      void *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+      if (ptr == MAP_FAILED) {
+        close(fd);
+        Napi::Error::New(env, "Failed to map shared memory")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+
+      // 保存到映射表
+      SharedMemoryInfo info_struct = {ptr, size, fd};
+      sharedMemories[name] = info_struct;
+
+      Napi::Object result = Napi::Object::New(env);
+      result.Set("success", true);
+      result.Set("size", Napi::Number::New(env, size));
+      return result;
+    }
+
+    // 从映射的共享内存创建零拷贝视图
+    static Napi::Value GetMappedView(const Napi::CallbackInfo &info) {
+      Napi::Env env = info.Env();
+
+      if (info.Length() < 1 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Expected (name: string)")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+
+      std::string name = info[0].As<Napi::String>().Utf8Value();
+      if (name[0] != '/') {
+        name = "/" + name;
+      }
+
+      auto it = sharedMemories.find(name);
+      if (it == sharedMemories.end()) {
+        Napi::Error::New(env,
+                         "Shared memory not mapped. Call mapSharedMemory first")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+
+      // 返回指针地址和大小，让 JavaScript 层处理
+      Napi::Object result = Napi::Object::New(env);
+      result.Set("address", Napi::Number::New(env, reinterpret_cast<uintptr_t>(
+                                                       it->second.ptr)));
+      result.Set("size", Napi::Number::New(env, it->second.size));
+
+      return result;
+    }
 };
 
 std::map<std::string, SharedMemoryManager::SharedMemoryInfo> 
@@ -182,6 +307,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("write", Napi::Function::New(env, SharedMemoryManager::Write));
     exports.Set("read", Napi::Function::New(env, SharedMemoryManager::Read));
     exports.Set("close", Napi::Function::New(env, SharedMemoryManager::Close));
+    exports.Set("mapSharedMemory",
+                Napi::Function::New(env, SharedMemoryManager::MapSharedMemory));
+    exports.Set("getMappedView",
+                Napi::Function::New(env, SharedMemoryManager::GetMappedView));
     return exports;
 }
 

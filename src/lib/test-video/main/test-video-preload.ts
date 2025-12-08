@@ -5,15 +5,13 @@ import { contextBridge, ipcRenderer } from "electron";
 
 // 动态加载 shared memory addon
 let sharedMemory: any = null;
+
 try {
   const path = require("path");
-  // 从 build/lib/test-video/main/ 访问 native/shared-memory/build/Release/
   const addon_path = path.join(__dirname, "../../../../native/shared-memory/build/Release/shared_memory.node");
   sharedMemory = require(addon_path);
-  console.log("✅ Shared memory addon loaded successfully");
 } catch (err) {
-  console.error("❌ Failed to load shared memory addon:", err);
-  console.log("Will fall back to IPC data transfer");
+  console.error("Failed to load shared memory addon:", err);
 }
 
 contextBridge.exposeInMainWorld("testVideoAPI", {
@@ -23,6 +21,9 @@ contextBridge.exposeInMainWorld("testVideoAPI", {
   
   // 停止
   stop: () => ipcRenderer.send("test-image-stop"),
+  
+  // 通知主进程帧已渲染完成
+  notifyFrameRendered: () => ipcRenderer.send("test-image-frame-rendered"),
   
   // 获取统计信息
   getStats: () => ipcRenderer.invoke("test-image-stats"),
@@ -34,16 +35,18 @@ contextBridge.exposeInMainWorld("testVideoAPI", {
     });
   },
   
-  // 读取帧数据 - 优先使用共享内存，否则使用 IPC
+  // 读取帧数据
   readFrameData: async (shmName?: string): Promise<ArrayBuffer> => {
     if (shmName && sharedMemory) {
       try {
+        // 从共享内存读取（有复制开销）
         const buffer = sharedMemory.read(shmName);
-        return buffer.buffer;
-      } catch (err) {
-        console.error("Failed to read from shared memory, falling back to IPC:", err);
+        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      } catch (err: any) {
+        console.error("[Preload] Failed to read from shared memory:", err);
       }
     }
+    
     // 回退到 IPC
     return ipcRenderer.invoke("test-image-get-frame-data");
   }

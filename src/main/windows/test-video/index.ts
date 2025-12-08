@@ -9,6 +9,9 @@ class TestVideoWindow extends WindowBase {
       height: 900,
       webPreferences: {
         preload: path.join(__dirname, "../../../lib/test-video/main/test-video-preload.js"),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false, // 禁用沙箱以允许 preload 访问 Node.js 模块
       },
       title: "共享内存测试视频播放器",
     });
