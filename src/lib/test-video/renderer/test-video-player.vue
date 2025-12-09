@@ -27,7 +27,7 @@
                         <option value="1920x1080">1920x1080 (Full HD)</option>
                         <option value="2560x1440">2560x1440 (2K)</option>
                         <option value="3840x2160">3840x2160 (4K)</option>
-                        <option value="7680x4320">7680x4320 (8K)</option>
+                        <option value="6000x3600">6000x3600 (6K)</option>
                     </select>
                 </label>
 
@@ -56,9 +56,21 @@
                 <span class="value">{{ frameNumber }}</span>
             </div>
             <div class="stat-row">
-                <span class="label">渲染延迟:</span>
-                <span class="value" :class="{ 'warning': renderLatency > 16 }">
+                <span class="label">总耗时:</span>
+                <span class="value" :class="{ 'warning': renderLatency > 33 }">
                     {{ renderLatency.toFixed(2) }}ms
+                </span>
+            </div>
+            <div class="stat-row">
+                <span class="label">渲染耗时:</span>
+                <span class="value" :class="{ 'warning': actualRenderTime > 20 }">
+                    {{ actualRenderTime.toFixed(2) }}ms
+                </span>
+            </div>
+            <div class="stat-row">
+                <span class="label">丢帧数:</span>
+                <span class="value" :class="{ 'warning': droppedFrames > 0 }">
+                    {{ droppedFrames }}
                 </span>
             </div>
             <div class="stat-row">
@@ -75,7 +87,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue";
-import { WebGLRGBRenderer } from "./webgl-rgb-renderer";
+import { WebGLNV12Renderer } from "./webgl-nv12-renderer";
 
 // 声明 window.testVideoAPI 类型（确保类型正确）
 declare global {
@@ -87,6 +99,8 @@ declare global {
             getStats: () => Promise<any>;
             onFrameReady: (callback: (frameInfo: any) => void) => void;
             readFrameData: (shmName?: string) => Promise<number>;
+            fillImageData: (buffer: Buffer, width: number, height: number) => Promise<void>;
+            getImageData: (width: number, height: number) => Promise<Buffer>;
         };
     }
 }
@@ -102,16 +116,23 @@ const currentWidth = ref(0);
 const currentHeight = ref(0);
 const currentFps = ref(0);
 const renderLatency = ref(0);
+const actualRenderTime = ref(0);  // 实际渲染耗时
+const droppedFrames = ref(0);  // 丢帧计数
 
-let renderer: WebGLRGBRenderer | null = null;
+let renderer: WebGLNV12Renderer | null = null;
 let fpsCounter = 0;
 let lastFpsTime = Date.now();
 let lastDataSize = 0;
 let lastDataTime = Date.now();
 let sharedMemoryName: string | undefined = undefined;  // 存储共享内存名称
+let renderLoopId: number | null = null;  // requestAnimationFrame ID
+let isRendering = false;  // 渲染中标志，防止并发渲染
+let targetFps = 30;  // 目标帧率
+let lastRenderTime = 0;  // 上次渲染时间
 
 const frameSizeMB = computed(() => {
-    return (currentWidth.value * currentHeight.value * 3) / (1024 * 1024);
+    // NV12 格式: 1.5 bytes per pixel (Y平面 + UV平面的一半)
+    return (currentWidth.value * currentHeight.value * 1.5) / (1024 * 1024);
 });
 
 const dataThroughput = computed(() => {
@@ -126,8 +147,8 @@ const dataThroughput = computed(() => {
 onMounted(() => {
     if (canvasRef.value) {
         try {
-            renderer = new WebGLRGBRenderer(canvasRef.value);
-            console.log("Renderer created successfully");
+            renderer = new WebGLNV12Renderer(canvasRef.value);
+            console.log("NV12 Renderer created successfully");
         } catch (err) {
             console.error("Failed to create renderer:", err);
         }
@@ -135,7 +156,7 @@ onMounted(() => {
 
     // 监听帧就绪事件
     if (window.testVideoAPI) {
-        window.testVideoAPI.onFrameReady(handleFrameReady);
+        window.testVideoAPI.onFrameReady(() => { });
     }
 });
 
@@ -169,8 +190,12 @@ async function start() {
             lastDataTime = Date.now();
             lastDataSize = 0;
             sharedMemoryName = result.shmName;  // 保存共享内存名称
+            targetFps = fps.value;  // 保存目标帧率
+            lastRenderTime = performance.now();
+            droppedFrames.value = 0;  // 重置丢帧计数
 
-            console.log("Test video started:", result.config, "useSharedMemory:", result.useSharedMemory, "shmName:", result.shmName);
+            // 启动渲染循环
+            startRenderLoop(); console.log("Test video started:", result.config, "useSharedMemory:", result.useSharedMemory, "shmName:", result.shmName);
         }
     } catch (err) {
         console.error("Failed to start test video:", err);
@@ -180,6 +205,9 @@ async function start() {
 
 function stop() {
     if (!isPlaying.value || !window.testVideoAPI) return;
+
+    // 停止渲染循环
+    stopRenderLoop();
 
     window.testVideoAPI.stop();
     isPlaying.value = false;
@@ -200,12 +228,54 @@ function openDevTools() {
     }
 }
 
-async function handleFrameReady(frameInfo: any) {
+// 启动渲染循环
+function startRenderLoop() {
+    const frameInterval = 1000 / targetFps;  // 帧间隔（ms）
+
+    const renderLoop = async (currentTime: number) => {
+        if (!isPlaying.value) return;
+
+        // 控制帧率
+        const elapsed = currentTime - lastRenderTime;
+        if (elapsed >= frameInterval) {
+            lastRenderTime = currentTime - (elapsed % frameInterval);
+
+            // 如果上一帧还在渲染中，跳过本帧（防止积压）
+            if (!isRendering) {
+                await rendFrame({
+                    width: currentWidth.value,
+                    height: currentHeight.value,
+                    frameNumber: frameNumber.value + 1
+                });
+            }
+        }
+
+        renderLoopId = requestAnimationFrame(renderLoop);
+    };
+
+    renderLoopId = requestAnimationFrame(renderLoop);
+}
+
+// 停止渲染循环
+function stopRenderLoop() {
+    if (renderLoopId !== null) {
+        cancelAnimationFrame(renderLoopId);
+        renderLoopId = null;
+    }
+}
+
+async function rendFrame(frameInfo: any) {
     if (!renderer || !isPlaying.value || !window.testVideoAPI) return;
 
-    const startTime = performance.now();
+    // 防止并发渲染
+    if (isRendering) {
+        console.warn("Frame dropped: previous render still in progress");
+        droppedFrames.value++;
+        return;
+    }
 
-    // 第一帧时输出调试信息
+    isRendering = true;
+    const startTime = performance.now();    // 第一帧时输出调试信息
     if (frameNumber.value === 0) {
         console.log("First frame info:", frameInfo);
     }
@@ -213,25 +283,27 @@ async function handleFrameReady(frameInfo: any) {
     try {
         // 读取帧数据 - 使用保存的共享内存名称
         const readStart = performance.now();
-        const rtV = await window.testVideoAPI.readFrameData(sharedMemoryName);
-        let arrayBuffer = (window as any).__LAST_SHARED_FRAME;
+        //const rtV = await window.testVideoAPI.readFrameData(sharedMemoryName);
+        //let buffer = new Uint8Array(frameInfo.width * frameInfo.height * 3);
+        let buffer = await window.testVideoAPI.getImageData(frameInfo.width, frameInfo.height);
+        //await window.testVideoAPI.fillImageData(buffer, frameInfo.width, frameInfo.height);
         const readTime = performance.now() - readStart;
 
-        if (!arrayBuffer) {
+        if (!buffer) {
             console.error("No frame data received");
-            // 通知主进程渲染完成（即使失败也要通知，避免卡住）
-            window.testVideoAPI.notifyFrameRendered();
+            isRendering = false;
             return;
         }
 
         // 渲染
         const renderStart = performance.now();
         renderer.renderFrame(
-            new Uint8Array(arrayBuffer as Buffer),
+            new Uint8Array(buffer as Buffer),
             frameInfo.width,
             frameInfo.height
         );
         const renderTime = performance.now() - renderStart;
+        actualRenderTime.value = renderTime;  // 更新实际渲染耗时
 
         // 更新统计
         frameNumber.value = frameInfo.frameNumber;
@@ -239,7 +311,7 @@ async function handleFrameReady(frameInfo: any) {
 
         // 前10帧和每100帧输出性能统计
         if (frameNumber.value < 10 || frameNumber.value % 100 === 0) {
-            console.log(`Frame ${frameNumber.value}: Read=${readTime.toFixed(2)}ms, Render=${renderTime.toFixed(2)}ms, Total=${renderLatency.value.toFixed(2)}ms, Size=${(arrayBuffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+            console.log(`Frame ${frameNumber.value}: Read=${readTime.toFixed(2)}ms, Render=${renderTime.toFixed(2)}ms, Total=${renderLatency.value.toFixed(2)}ms, Dropped=${droppedFrames.value}, Size=${(buffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
         }
 
         // 计算 FPS
@@ -252,7 +324,74 @@ async function handleFrameReady(frameInfo: any) {
         }
 
         // 计算吞吐量
-        lastDataSize += arrayBuffer.byteLength;
+        lastDataSize += buffer.byteLength;
+        if (now - lastDataTime >= 1000) {
+            lastDataTime = now;
+            lastDataSize = 0;
+        }
+
+    } catch (err) {
+        console.error("Failed to render frame:", err);
+    } finally {
+        isRendering = false;
+    }
+}
+async function handleFrameReady(frameInfo: any) {
+
+    if (!renderer || !isPlaying.value || !window.testVideoAPI) return;
+
+    const startTime = performance.now();
+
+    // 第一帧时输出调试信息
+    if (frameNumber.value === 0) {
+        console.log("First frame info:", frameInfo);
+    }
+
+    try {
+        // 读取帧数据 - 使用保存的共享内存名称
+        const readStart = performance.now();
+        //const rtV = await window.testVideoAPI.readFrameData(sharedMemoryName);
+        //let buffer = new Uint8Array(frameInfo.width * frameInfo.height * 3);
+        let buffer = await window.testVideoAPI.getImageData(frameInfo.width, frameInfo.height);
+        //await window.testVideoAPI.fillImageData(buffer, frameInfo.width, frameInfo.height);
+        const readTime = performance.now() - readStart;
+
+        if (!buffer) {
+            console.error("No frame data received");
+            // 通知主进程渲染完成（即使失败也要通知，避免卡住）
+            window.testVideoAPI.notifyFrameRendered();
+            return;
+        }
+
+        // 渲染
+        const renderStart = performance.now();
+        renderer.renderFrame(
+            new Uint8Array(buffer as Buffer),
+            frameInfo.width,
+            frameInfo.height
+        );
+        const renderTime = performance.now() - renderStart;
+
+        // 更新统计
+        frameNumber.value = frameInfo.frameNumber;
+        renderLatency.value = performance.now() - startTime;
+
+        // 前10帧和每100帧输出性能统计
+        if (frameNumber.value < 10 || frameNumber.value % 10 === 0) {
+            console.log(`Frame ${frameNumber.value}: Read=${readTime.toFixed(2)}ms, Render=${renderTime.toFixed(2)}ms, Total=${renderLatency.value.toFixed(2)}ms, Size=${(buffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+        }
+
+        // 计算 FPS
+        fpsCounter++;
+        const now = Date.now();
+        if (now - lastFpsTime >= 1000) {
+            currentFps.value = fpsCounter;
+            fpsCounter = 0;
+            lastFpsTime = now;
+        }
+
+        // 计算吞吐量
+        lastDataSize += buffer.byteLength;
         if (now - lastDataTime >= 1000) {
             lastDataTime = now;
             lastDataSize = 0;
