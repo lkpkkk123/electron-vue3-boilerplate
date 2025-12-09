@@ -1,7 +1,7 @@
 /**
  * Preload 脚本 - 暴露测试视频 API
  */
-import { contextBridge, ipcRenderer } from "electron";
+import { ipcRenderer } from "electron";
 
 // 动态加载 shared memory addon
 let sharedMemory: any = null;
@@ -14,7 +14,7 @@ try {
   console.error("Failed to load shared memory addon:", err);
 }
 
-contextBridge.exposeInMainWorld("testVideoAPI", {
+(window as any).testVideoAPI = {
   // 启动测试视频生成
   start: (config: { width: number; height: number; fps: number }) => 
     ipcRenderer.invoke("test-image-start", config),
@@ -50,4 +50,4 @@ contextBridge.exposeInMainWorld("testVideoAPI", {
     // 回退到 IPC
     return ipcRenderer.invoke("test-image-get-frame-data");
   }
-});
+};

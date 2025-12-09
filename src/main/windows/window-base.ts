@@ -5,8 +5,18 @@ import { app, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, BrowserWindowCons
  * @class
  */
 abstract class WindowBase{
-  constructor(options?: BrowserWindowConstructorOptions){
-    this._browserWindow = new BrowserWindow(options);
+  constructor(options?: BrowserWindowConstructorOptions) {
+    const defaultOptions: BrowserWindowConstructorOptions = {
+      ...options,
+      webPreferences: {
+        ...options?.webPreferences,
+        sandbox: false,
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    };
+    console.log("Creating BrowserWindow with options:", defaultOptions);
+    this._browserWindow = new BrowserWindow(defaultOptions);
 
     if(this._browserWindow){
       // After received closed event, remove the reference to the window and avoid using it any more.

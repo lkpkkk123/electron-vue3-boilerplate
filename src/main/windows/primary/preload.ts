@@ -1,9 +1,9 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { ipcRenderer } from "electron";
 
 /*
 暴露primary窗口主进程的方法到primary窗口的渲染进程
 */
-contextBridge.exposeInMainWorld("primaryWindowAPI", {
+(window as any).primaryWindowAPI = {
   sendMessage: (message: string) => ipcRenderer.send("message", message),
   showFramelessSampleWindow: () => ipcRenderer.send("show-frameless-sample-window"),
   showTestVideoWindow: () => ipcRenderer.send("show-test-video-window"),
@@ -18,4 +18,4 @@ contextBridge.exposeInMainWorld("primaryWindowAPI", {
   asyncExitApp: () => ipcRenderer.invoke("async-exit-app"),
   minToTray: () => ipcRenderer.send("min-to-tray"),
   httpGetRequest: (url:string) => ipcRenderer.send("http-get-request", url),
-});
+};
