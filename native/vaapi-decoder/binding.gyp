@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "target_name": "simple_vaapi_decoder",
-      "sources": [ "simple_vaapi_decoder.cpp" ],
+      "target_name": "pure_vaapi_decoder",
+      "sources": [ "pure_vaapi_decoder.cpp" ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
         "/usr/include/libdrm"
@@ -12,9 +12,7 @@
       ],
       "libraries": [
         "-lva",
-        "-lva-drm",
-        "-lavcodec",
-        "-lavutil"
+        "-lva-drm"
       ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],

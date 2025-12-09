@@ -2,10 +2,10 @@
  * Preload 脚本 - 暴露测试视频 API
  */
 import { ipcRenderer } from "electron";
-
+import fs from "fs";
 // 动态加载 shared memory addon
 let sharedMemory: any = null;
-let vaapiDecoder: any = null;
+let pureVaapiDecoder: any = null;
 let currentDecoder: any = null;
 
 try {
@@ -16,14 +16,14 @@ try {
   console.error("Failed to load shared memory addon:", err);
 }
 
-// 加载 VA-API 解码器
+// 加载纯 VA-API 解码器（不依赖 FFmpeg）
 try {
   const path = require("path");
-  const decoder_path = path.join(__dirname, "../../../../native/vaapi-decoder/build/Release/vaapi_decoder.node");
-  vaapiDecoder = require(decoder_path);
-  console.log("VA-API decoder loaded successfully");
+  const decoder_path = path.join(__dirname, "../../../../native/vaapi-decoder/build/Release/pure_vaapi_decoder.node");
+  pureVaapiDecoder = require(decoder_path);
+  console.log("Pure VA-API decoder loaded successfully");
 } catch (err) {
-  console.error("Failed to load VA-API decoder addon:", err);
+  console.error("Failed to load pure VA-API decoder addon:", err);
 }
 
 (window as any).testVideoAPI = {
@@ -76,22 +76,21 @@ try {
   },
 
   getImageFromVideo: (width: number, height: number): Buffer => {
-    if (!vaapiDecoder) {
-      console.error("[Preload] VA-API decoder addon not loaded");
+    if (!pureVaapiDecoder) {
+      console.error("[Preload] Pure VA-API decoder addon not loaded");
       return Buffer.alloc(0);
     }
 
     try {
       // 如果解码器未初始化，则初始化
       if (!currentDecoder) {
-        console.log("[Preload] Initializing VA-API decoder...");
-        currentDecoder = new vaapiDecoder.VaapiDecoder();
+        console.log("[Preload] Initializing pure VA-API decoder...");
+        currentDecoder = new pureVaapiDecoder.PureVaapiDecoder();
         const videoPath = "/home/likp/Public/osd2.265";
         
-        console.log("[Preload] Opening video file:", videoPath);
+        console.log("[Preload] Opening H.265 raw stream:", videoPath);
         
         // 检查文件是否存在
-        const fs = require('fs');
         if (!fs.existsSync(videoPath)) {
           console.error("[Preload] Video file does not exist:", videoPath);
           currentDecoder = null;
@@ -99,29 +98,11 @@ try {
         }
         console.log("[Preload] File exists, size:", fs.statSync(videoPath).size, "bytes");
         
-        const success = currentDecoder.initFromFile(videoPath);
+        const success = currentDecoder.init(videoPath);
         if (!success) {
           const error = currentDecoder.getLastError ? currentDecoder.getLastError() : "Unknown error";
-          console.error("[Preload] Failed to initialize decoder with:", videoPath);
+          console.error("[Preload] Failed to initialize decoder");
           console.error("[Preload] Error:", error);
-          console.error("[Preload] Possible causes:");
-          console.error("  1. VA-API device not accessible (check /dev/dri/renderD128)");
-          console.error("  2. Unsupported video codec");
-          console.error("  3. Corrupted video file");
-          
-          // 检查 VA-API 设备
-          try {
-            const drmPath = "/dev/dri/renderD128";
-            if (fs.existsSync(drmPath)) {
-              const stats = fs.statSync(drmPath);
-              console.log("[Preload] DRM device exists, mode:", stats.mode.toString(8));
-            } else {
-              console.error("[Preload] DRM device not found:", drmPath);
-            }
-          } catch (e) {
-            console.error("[Preload] Error checking DRM device:", e);
-          }
-          
           currentDecoder = null;
           return Buffer.alloc(0);
         }
@@ -129,9 +110,7 @@ try {
         // 获取视频信息
         const info = currentDecoder.getVideoInfo();
         if (info) {
-          console.log(`[Preload] Video initialized: ${info.width}x${info.height} @ ${info.fps} fps, codec: ${info.codec}`);
-        } else {
-          console.error("[Preload] Failed to get video info");
+          console.log(`[Preload] Video initialized: ${info.width}x${info.height}`);
         }
       }
 
@@ -139,22 +118,21 @@ try {
       const frame = currentDecoder.decodeFrame();
       if (frame) {
         // 返回 NV12 格式的帧数据
-        if (Math.random() < 0.01) { // 每 100 帧输出一次以减少日志
-          console.log(`[Preload] Decoded frame: ${frame.width}x${frame.height}, ${(frame.data.length / 1024 / 1024).toFixed(2)} MB`);
-        }
         return frame.data;
       } else {
-        // 到达文件末尾，重新初始化解码器以循环播放
-        console.log("[Preload] End of video, restarting...");
-        currentDecoder.close();
-        currentDecoder = null;
+        // 到达文件末尾，重置解码器循环播放
+        console.log("[Preload] End of video, resetting...");
+        currentDecoder.reset();
         
-        // 递归调用重新开始
-        return (window as any).testVideoAPI.getImageFromVideo(width, height);
+        // 再次尝试解码
+        const firstFrame = currentDecoder.decodeFrame();
+        if (firstFrame) {
+          return firstFrame.data;
+        }
+        return Buffer.alloc(0);
       }
     } catch (err: any) {
       console.error("[Preload] Failed to decode frame:", err);
-      console.error("[Preload] Error stack:", err.stack);
       if (currentDecoder) {
         try {
           currentDecoder.close();

@@ -24,7 +24,7 @@
                 <label>
                     分辨率:
                     <select v-model="resolution" :disabled="isPlaying">
-                        <option value="1920x1080">1920x1080 (Full HD)</option>
+                        <option value="6272x3456">6272x3456 (Full HD)</option>
                         <option value="2560x1440">2560x1440 (2K)</option>
                         <option value="3840x2160">3840x2160 (4K)</option>
                         <option value="6000x3600">6000x3600 (6K)</option>
@@ -102,6 +102,7 @@ declare global {
             fillImageData: (buffer: Buffer, width: number, height: number) => Promise<void>;
             getImageData: (width: number, height: number) => Promise<Buffer>;
             getImageFromVideo: (width: number, height: number) => Buffer;
+            getImageFromVideo2: (width: number, height: number) => Buffer;
         };
     }
 }
