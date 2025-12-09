@@ -36,12 +36,15 @@ try {
   },
   
   // 读取帧数据
-  readFrameData: async (shmName?: string): Promise<ArrayBuffer> => {
+  readFrameData: async (shmName?: string): Promise<number> => {
     if (shmName && sharedMemory) {
       try {
         // 从共享内存读取（有复制开销）
         const buffer = sharedMemory.read(shmName);
-        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+        (window as any).__LAST_SHARED_FRAME = buffer;
+        //return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+        //console.log("retrun buffer.buffer");
+        return 0;
       } catch (err: any) {
         console.error("[Preload] Failed to read from shared memory:", err);
       }

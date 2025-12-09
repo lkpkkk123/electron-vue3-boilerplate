@@ -167,14 +167,19 @@ public:
           it = sharedMemories.find(name);
         }
 
-        // 创建 Buffer（拷贝数据）
-        // 注意：虽然有拷贝开销，但这是跨进程传输大数据的必要成本
-        Napi::Buffer<uint8_t> buffer = Napi::Buffer<uint8_t>::Copy(
-            env,
-            static_cast<uint8_t*>(it->second.ptr),
-            it->second.size
-        );
-        
+        // auto finalizer = [](Napi::Env env, void *data) {
+
+        // };
+        // Napi::Buffer<char> buffer =
+        //     Napi::Buffer<char>::New(env,
+        //                             (char *)static_cast<uint8_t *>(
+        //                                 it->second.ptr), //
+        //                                 直接传入共享内存指针
+        //                             it->second.size, finalizer);
+        Napi::Buffer<char> buffer = Napi::Buffer<char>::Copy(
+            env, (char *)static_cast<uint8_t *>(it->second.ptr),
+            it->second.size);
+
         return buffer;
     }
     

@@ -86,7 +86,7 @@ declare global {
             notifyFrameRendered: () => void;
             getStats: () => Promise<any>;
             onFrameReady: (callback: (frameInfo: any) => void) => void;
-            readFrameData: (shmName?: string) => Promise<ArrayBuffer>;
+            readFrameData: (shmName?: string) => Promise<number>;
         };
     }
 }
@@ -213,7 +213,8 @@ async function handleFrameReady(frameInfo: any) {
     try {
         // 读取帧数据 - 使用保存的共享内存名称
         const readStart = performance.now();
-        const arrayBuffer = await window.testVideoAPI.readFrameData(sharedMemoryName);
+        const rtV = await window.testVideoAPI.readFrameData(sharedMemoryName);
+        let arrayBuffer = (window as any).__LAST_SHARED_FRAME;
         const readTime = performance.now() - readStart;
 
         if (!arrayBuffer) {
@@ -226,7 +227,7 @@ async function handleFrameReady(frameInfo: any) {
         // 渲染
         const renderStart = performance.now();
         renderer.renderFrame(
-            new Uint8Array(arrayBuffer),
+            new Uint8Array(arrayBuffer as Buffer),
             frameInfo.width,
             frameInfo.height
         );
