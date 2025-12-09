@@ -101,6 +101,7 @@ declare global {
             readFrameData: (shmName?: string) => Promise<number>;
             fillImageData: (buffer: Buffer, width: number, height: number) => Promise<void>;
             getImageData: (width: number, height: number) => Promise<Buffer>;
+            getImageFromVideo: (width: number, height: number) => Buffer;
         };
     }
 }
@@ -281,16 +282,13 @@ async function rendFrame(frameInfo: any) {
     }
 
     try {
-        // 读取帧数据 - 使用保存的共享内存名称
+        // 读取帧数据 - 使用 VA-API 解码器从视频文件获取
         const readStart = performance.now();
-        //const rtV = await window.testVideoAPI.readFrameData(sharedMemoryName);
-        //let buffer = new Uint8Array(frameInfo.width * frameInfo.height * 3);
-        let buffer = await window.testVideoAPI.getImageData(frameInfo.width, frameInfo.height);
-        //await window.testVideoAPI.fillImageData(buffer, frameInfo.width, frameInfo.height);
+        let buffer = await window.testVideoAPI.getImageFromVideo(frameInfo.width, frameInfo.height);
         const readTime = performance.now() - readStart;
 
-        if (!buffer) {
-            console.error("No frame data received");
+        if (!buffer || buffer.length === 0) {
+            console.error("No frame data received from video decoder");
             isRendering = false;
             return;
         }

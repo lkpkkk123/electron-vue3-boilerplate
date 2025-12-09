@@ -1,0 +1,14 @@
+{
+  "name": "vaapi-decoder",
+  "version": "1.0.0",
+  "description": "VA-API hardware video decoder for H264/H265",
+  "main": "index.js",
+  "gypfile": true,
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  }
+}
