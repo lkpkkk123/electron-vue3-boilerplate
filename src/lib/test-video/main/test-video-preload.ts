@@ -86,7 +86,8 @@ try {
       if (!currentDecoder) {
         console.log("[Preload] Initializing pure VA-API decoder...");
         currentDecoder = new pureVaapiDecoder.PureVaapiDecoder();
-        const videoPath = "/home/zs/118.mp4";
+        //const videoPath = "/home/zs/118.mp4";
+        const videoPath = "/home/likp/Public/osd2.mp4";
         
         console.log("[Preload] Opening H.265 raw stream:", videoPath);
         
@@ -120,9 +121,9 @@ try {
       }
 
       // 解码一帧
-      console.log("[Preload] Decoding frame...");
+      //console.log("[Preload] Decoding frame...");
       const frame = currentDecoder.decodeFrame();
-      console.log("[Preload] Decoding frame out...");
+      //console.log("[Preload] Decoding frame out...");
 
       if (frame) {
         // 返回 NV12 格式的帧数据

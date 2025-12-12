@@ -104,7 +104,7 @@ public:
   // 解码一帧
   bool decodeFrame(uint8_t **out_data, int *out_width, int *out_height,
                    size_t *out_size) {
-    printf("Decoding frame...\n");
+    // printf("Decoding frame...\n");
     int ret = DecodeFrame(m_dec, out_data, out_width, out_height, out_size);
     if (ret == 0) {
       return true;
