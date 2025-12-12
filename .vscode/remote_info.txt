@@ -1,0 +1,15 @@
+ip=192.168.8.34
+port=22
+#ip=xzx1.tpddns.cn
+#port=9104
+#ip=deshany.cn
+#port=20001ye
+pass=1
+board_type=4
+user=zs
+make_threads=8
+dir=/opt/aibox/log
+mode=t
+name_pattern=aibox
+to_find_str=fps
+endline=1remo

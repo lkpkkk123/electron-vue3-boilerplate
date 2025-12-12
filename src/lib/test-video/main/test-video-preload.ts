@@ -36,7 +36,7 @@ try {
     // 关闭解码器
     if (currentDecoder) {
       try {
-        currentDecoder.close();
+        //currentDecoder.close();
         console.log("[Preload] Video decoder closed");
       } catch (err) {
         console.error("[Preload] Error closing decoder:", err);
@@ -86,7 +86,7 @@ try {
       if (!currentDecoder) {
         console.log("[Preload] Initializing pure VA-API decoder...");
         currentDecoder = new pureVaapiDecoder.PureVaapiDecoder();
-        const videoPath = "/home/likp/Public/osd2.265";
+        const videoPath = "/home/zs/118.mp4";
         
         console.log("[Preload] Opening H.265 raw stream:", videoPath);
         
@@ -99,8 +99,10 @@ try {
         console.log("[Preload] File exists, size:", fs.statSync(videoPath).size, "bytes");
         
         const success = currentDecoder.init(videoPath);
+        console.log("[Preload] init finsh success =", success);
+
         if (!success) {
-          const error = currentDecoder.getLastError ? currentDecoder.getLastError() : "Unknown error";
+          const error =  "Unknown error";
           console.error("[Preload] Failed to initialize decoder");
           console.error("[Preload] Error:", error);
           currentDecoder = null;
@@ -108,21 +110,27 @@ try {
         }
         
         // 获取视频信息
+        console.log("currentDecoder.getVideoInfo() in");
         const info = currentDecoder.getVideoInfo();
+        console.log("currentDecoder.getVideoInfo() out");
+
         if (info) {
           console.log(`[Preload] Video initialized: ${info.width}x${info.height}`);
         }
       }
 
       // 解码一帧
+      console.log("[Preload] Decoding frame...");
       const frame = currentDecoder.decodeFrame();
+      console.log("[Preload] Decoding frame out...");
+
       if (frame) {
         // 返回 NV12 格式的帧数据
         return frame.data;
       } else {
         // 到达文件末尾，重置解码器循环播放
         console.log("[Preload] End of video, resetting...");
-        currentDecoder.reset();
+        //currentDecoder.reset();
         
         // 再次尝试解码
         const firstFrame = currentDecoder.decodeFrame();
@@ -135,7 +143,7 @@ try {
       console.error("[Preload] Failed to decode frame:", err);
       if (currentDecoder) {
         try {
-          currentDecoder.close();
+          //currentDecoder.close();
         } catch (e) {
           console.error("[Preload] Error closing decoder:", e);
         }

@@ -1,0 +1,92 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "inputs": [
+    {
+        "id": "ip",
+        "type": "promptString",
+        "description": "ip",
+        "default": ""
+    },
+    {
+        "id": "port",
+        "type": "promptString",
+        "description": "port",
+        "default": "22"
+    },
+    {
+        "id": "pass",
+        "type": "promptString",
+        "description": "pass",
+        "default": ""
+    }
+    ],
+    "tasks": [
+        {
+            "label": "init_remote",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} init"
+        },
+        {
+            "label": "clean_remote",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} clean"
+        },
+        {
+            "label": "build_remote",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} build",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "debug_remote",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} debug"
+        },
+        {
+            "label": "last_log",
+            "type": "shell",
+            "command": "~/scripts/lastfile.sh -f ${workspaceFolder}/.vscode/remote_info.txt"
+        },
+        {
+            "label": "del_remote_src",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} del_remote_src"
+        },
+        {
+            "label": "sqlite_editer",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} sqlite_editer"
+        },
+        {
+            "label": "set_time",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} set_time"
+        },
+        {
+            "label": "add_key",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} add_key"
+        },
+        {
+            "label": "my_remote_gdb",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} remote_ssh",
+        },
+        {
+            "label": "my_remote_ssh",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} remote_ssh2",
+        },
+        {
+            "label": "kill_remote",
+            "type": "shell",
+            "command": "~/scripts/build.sh ${workspaceFolder} ${workspaceFolderBasename} kill"
+        }
+    ]
+}

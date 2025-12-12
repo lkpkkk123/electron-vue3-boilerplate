@@ -1,11 +1,77 @@
 {
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "html",
-    "vue"
+  "files.autoGuessEncoding": true,
+  "files.encoding": "gb2312",
+  "files.exclude": {
+    "**/.d": true,
+    "**/.o": true,
+    "**/deps": true,
+    "**/obj": true
+  },
+  "files.associations": {
+    "*.tcc": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "string_view": "cpp",
+    "cstddef": "cpp",
+    "functional": "cpp"
+  },
+  "clangd.arguments": [
+    "--log=verbose",
+    "--header-insertion=never",
+    "--query-driver=/usr/bin/g++"
   ],
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
-  }
+  //"clangd.path": "/home/likp/Downloads/clangd_18.1.3/bin/clangd",
+  "clangd.fallbackFlags": [
+    "-I/usr/local/include/opencv4/",
+    "-I/usr/local/cuda/include",
+    "-DDEBUG",
+    "-D__LINUX__",
+    "-std=gnu++11",
+    "-DBMMT_V2",
+    "-DX86",
+    "-DSTITCH",
+    "-I/usr/include/freetype2",
+    "-Isrc/Alg/track/ComprehensiveCG",
+    "-I${workspaceFolder}/src",
+    "-I${workspaceFolder}/global_include",
+    "-I${workspaceFolder}/src/Cfg",
+    "-I${workspaceFolder}/src/Alg",
+    "-I${workspaceFolder}/src/ar",
+    "-I${workspaceFolder}/src/Board",
+    "-I${workspaceFolder}/src/Channel",
+    "-I${workspaceFolder}/src/Client",
+    "-I${workspaceFolder}/src/DtMode",
+    "-I${workspaceFolder}/src/Global",
+    "-I${workspaceFolder}/src/Head",
+    "-I${workspaceFolder}/src/Record",
+    "-I${workspaceFolder}/src/Alg/DL",
+    "-I${workspaceFolder}/src/Alg/ImgEnhance",
+    "-I${workspaceFolder}/src/Alg/track",
+    "-I${workspaceFolder}/src/Alg/UavDetection",
+    "-I${workspaceFolder}/src/Client/GB28181",
+    "-I${workspaceFolder}/src/Client/HTTP",
+    "-I${workspaceFolder}/src/Client/Process",
+    "-I${workspaceFolder}/src/Client",
+    "-I${workspaceFolder}/src/Client/Socket",
+    "-I${workspaceFolder}/src/Client/WebSocket",
+    "-I${workspaceFolder}/src/Global/ColorConversion",
+    "-I${workspaceFolder}/src/Global/ftplibpp",
+    "-I${workspaceFolder}/src/Global/mars",
+    "-I${workspaceFolder}/src/Global/serial",
+    "-I${workspaceFolder}/src/Channel/StreamMedia",
+    "-I${workspaceFolder}/src/Channel/FileCap",
+    "-I${workspaceFolder}/src/Head/LDBFHead",
+    "-I${workspaceFolder}/src/Listing",
+    "-I${workspaceFolder}/../hc_sdk/IntrusionSDK/inc",
+    "-I${workspaceFolder}/../hc_sdk/gb28181",
+    "-I${workspaceFolder}/../hc_sdk/cross_platform_utils",
+    "-I${workspaceFolder}/../hc_sdk/include",
+    "-I${workspaceFolder}/../hc_sdk/include/proj_common",
+    "-I${workspaceFolder}/../hc_sdk/mmsdk/include",
+    "-I${workspaceFolder}/",
+    "-I/opt/aibox/lib/ffmpeg/include",
+    "-DFFMPEG5_VER"
+  ],
+  "editor.inlayHints.enabled": "off",
+  "Codegeex.RepoIndex": true
 }

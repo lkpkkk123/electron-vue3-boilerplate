@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "by-gdb",
+            "request": "launch",
+            "name": "Launch(SSH)",
+            //"program": "${workspaceFolder}/aibox_stitch_airport",
+            "program": "/opt/aibox/bin/aibox_stitch_airport",
+            "cwd": "/opt/aibox/bin",
+            "programArgs":"test",
+            "ssh": {
+                "enabled": true,
+                "env":[
+                    {"key":"LD_LIBRARY_PATH","val":"/opt/aibox/lib"},
+                    {"key":"MMSDK_TPM_CPU","val":"1"},
+                    {"key":"MMSDK_VIDEO_SERVER","val":"192.168.0.114"}
+                ],
+                "username": "root",
+                "address": "192.168.8.77:32181",
+                //"address": "xzx1.tpddns.cn:9104",
+                "passwordType": "none"
+            }
+        }
+    ]
+}

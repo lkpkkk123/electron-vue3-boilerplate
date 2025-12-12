@@ -11,8 +11,8 @@
         "<!(node -p \"require('node-addon-api').gyp\")"
       ],
       "libraries": [
-        "-lva",
-        "-lva-drm"
+        "-lx264",
+        "-lx265"
       ],
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
