@@ -177,9 +177,9 @@ private:
         int width = 0, height = 0;
         size_t size = 0;
 
-        printf("start DecodeFrame in wrapper...\n");
+        // printf("start DecodeFrame in wrapper...\n");
         bool success = decoder_->decodeFrame(&data, &width, &height, &size);
-        printf("end DecodeFrame in wrapper...\n");
+        // printf("end DecodeFrame in wrapper...\n");
 
         if (!success) return env.Null();
 
